@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>FoundPhone Studio: 李羲承篇</title>
+  <style>
+    /* ================= iOS 基础与全局响应式 ================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Malgun Gothic", sans-serif;
+    }
+    body {
+      background-color: #050505;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    /* 模拟器容器 */
+    .phone-container {
+      width: 390px;
+      height: 820px;
+      max-height: 96vh;
+      background: #000;
+      border-radius: 48px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(0,0,0,0.9), 0 0 0 10px #2c2c2e;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 480px) {
+      .phone-container {
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* 灵动岛 */
+    .dynamic-island {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 115px;
+      height: 32px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 44px;
+      padding: 12px 22px 0 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9990;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    /* 底部 Home Bar */
+    .home-indicator-bar {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 134px;
+      height: 5px;
+      background-color: #ffffff;
+      border-radius: 3px;
+      z-index: 9999;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      transition: opacity 0.2s;
+    }
+    .home-indicator-bar:active { opacity: 0.6; }
+
+    /* 顶部 Notification 消息弹窗 */
+    .notification-popup {
+      position: absolute;
+      top: -120px;
+      left: 12px;
+      right: 12px;
+      background: rgba(30, 30, 32, 0.94);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 20px;
+      padding: 12px 16px;
+      z-index: 9998;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      transition: transform 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      border: 0.5px solid rgba(255,255,255,0.15);
+      cursor: pointer;
+    }
+    .notification-popup.show {
+      transform: translateY(128px);
+    }
+    .notif-header { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #aaa; }
+    .notif-icon { width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+    .notif-title { font-size: 14px; font-weight: 600; color: #fff; }
+    .notif-body { font-size: 13px; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ================= 锁屏界面 ================= */
+    #lock-screen {
+      position: absolute;
+      inset: 0;
+      background: url('wallpaper.jpg') center/cover no-repeat;
+      z-index: 8000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 70px 20px 50px 20px;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .lock-time { font-size: 72px; font-weight: 200; letter-spacing: -2px; }
+    .lock-date { font-size: 17px; font-weight: 500; margin-top: -8px; opacity: 0.9; }
+
+    #passcode-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(35px);
+      -webkit-backdrop-filter: blur(35px);
+      z-index: 8500;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+    }
+    .passcode-dots { display: flex; gap: 16px; }
+    .dot { width: 13px; height: 13px; border: 2px solid #fff; border-radius: 50%; transition: background 0.2s; }
+    .dot.filled { background: #fff; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 28px; }
+    .key-btn { width: 68px; height: 68px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; }
+
+    /* ================= 桌面 Desktop ================= */
+    #home-screen {
+      position: absolute;
+      inset: 0;
+      background: url('wallpaper.jpg') center/cover no-repeat;
+      padding: 54px 18px 24px 18px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, auto);
+      gap: 18px 12px;
+      z-index: 1000;
+    }
+    .app-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+    .app-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .app-name { font-size: 11px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8); text-align: center; }
+
+    /* iOS 矢量拟真 Icon 样式 */
+    .icon-kkt { background: #fee500; color: #3c1e1e; font-weight: 900; font-size: 16px; }
+    .icon-wx { background: #07c160; }
+    .icon-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+    .icon-tw { background: #000; border: 0.5px solid #333; font-weight: bold; font-size: 20px; }
+    .icon-thr { background: #000; border: 0.5px solid #333; font-weight: bold; font-size: 24px; }
+    .icon-wb { background: #e6162d; }
+    .icon-nav { background: #03cf5d; color: #fff; font-weight: 900; font-size: 24px; }
+    .icon-pic { background: #fff; }
+    .icon-mus { background: linear-gradient(135deg, #fa2d48, #fa233b); }
+    .icon-saf { background: #007aff; }
+    .icon-cal { background: #fff; color: #ff3b30; font-weight: bold; flex-direction: column; line-height: 1; }
+
+    /* Weather Widget */
+    .weather-widget {
+      grid-column: span 4;
+      background: linear-gradient(135deg, #2c4763, #483d5a);
+      border-radius: 20px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* App 通用模态容器 */
+    .app-container {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      z-index: 5000;
+      display: none;
+      flex-direction: column;
+      padding-top: 40px;
+      padding-bottom: 22px;
+      animation: appOpen 0.22s cubic-bezier(0, 0, 0.2, 1) forwards;
+    }
+    @keyframes appOpen {
+      from { transform: scale(0.93); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .app-header {
+      height: 42px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 0.5px solid #222;
+      background: #121212;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .app-content { flex: 1; overflow-y: auto; position: relative; }
+
+    /* KakaoTalk Styles */
+    .kkt-bg { background: #abc1d1; color: #000; }
+    .chat-bubble-wrap { display: flex; flex-direction: column; margin: 8px 12px; max-width: 78%; }
+    .chat-bubble-wrap.me { align-self: flex-end; align-items: flex-end; }
+    .chat-bubble-wrap.other { align-self: flex-start; align-items: flex-start; }
+    .chat-bubble { padding: 9px 13px; border-radius: 13px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+    .chat-bubble-wrap.me .chat-bubble { background: #fee500; color: #000; border-top-right-radius: 2px; }
+    .chat-bubble-wrap.other .chat-bubble { background: #fff; color: #000; border-top-left-radius: 2px; }
+    .translation-sub { font-size: 11px; color: #666; margin-top: 3px; font-weight: 400; }
+
+    .chat-input-bar { padding: 8px 12px; background: #eee; display: flex; gap: 8px; align-items: center; }
+    .chat-input-bar input { flex: 1; border: none; border-radius: 18px; padding: 8px 14px; font-size: 14px; outline: none; }
+    .chat-input-bar button { background: #fee500; border: none; padding: 8px 14px; border-radius: 16px; font-weight: bold; cursor: pointer; }
+
+    /* WeChat Styles */
+    .wx-item { display: flex; align-items: center; padding: 12px 14px; border-bottom: 0.5px solid #222; gap: 12px; cursor: pointer; }
+    .wx-avatar { width: 44px; height: 44px; border-radius: 8px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+    /* 微博 UI (浅色原汁原味布局，纯文本无图片) */
+    .weibo-body { background: #f2f2f2; color: #333; }
+    .weibo-nav { display: flex; justify-content: space-around; background: #fff; border-bottom: 0.5px solid #e0e0e0; padding: 10px; font-size: 14px; font-weight: bold; color: #666; }
+    .weibo-nav .active { color: #ff8200; border-bottom: 2px solid #ff8200; padding-bottom: 4px; }
+    .weibo-card { background: #fff; margin-bottom: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 0.5px solid #e6e6e6; }
+    .weibo-user-bar { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: #333; }
+    .weibo-avatar { width: 36px; height: 36px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .weibo-text { font-size: 14px; line-height: 1.45; color: #1a1a1a; white-space: pre-line; }
+    .weibo-footer { display: flex; justify-content: space-around; border-top: 0.5px solid #f0f0f0; padding-top: 8px; color: #888; font-size: 12px; margin-top: 4px; }
+
+    /* Instagram 简约白风格 (iOS Real Light UI) */
+    .ig-body { background: #ffffff; color: #000000; }
+    .ig-header { background: #ffffff; color: #000000; border-bottom: 0.5px solid #e5e5e5; }
+    .ig-post-card { background: #fff; border-bottom: 0.5px solid #efefef; padding-bottom: 12px; margin-bottom: 12px; }
+    .ig-user-bar { display: flex; align-items: center; padding: 10px 12px; gap: 10px; }
+    .ig-avatar { width: 34px; height: 34px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+    /* Apple Music 原生播放器控条 */
+    .music-controls-panel {
+      background: rgba(30, 30, 32, 0.95);
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 0.5px solid #333;
+    }
+    .music-progress {
+      width: 100%;
+      accent-color: #fa2d48;
+      cursor: pointer;
+    }
+
+    /* Naver Styles */
+    .naver-card { background: #1c1c1e; margin: 10px; padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .naver-input { background: #2c2c2e; border: 1px solid #444; color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none; }
+
+    /* Photos 网格与 iOS 边框 */
+    .photos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+    .photo-item { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; transition: opacity 0.2s; }
+    .photo-item:hover { opacity: 0.85; }
+    #photo-fullscreen { position: absolute; inset: 0; background: #000; z-index: 9999; display: none; justify-content: center; align-items: center; }
+    #photo-fullscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    /* DM 私信卡片 */
+    .dm-item-card { background:#f9f9f9; color:#000; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; border:0.5px solid #e0e0e0; }
+    .dm-item-card-dark { background:#161618; color:#fff; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; border:0.5px solid #2a2a2d; }
+  </style>
+</head>
+<body>
+
+<div class="phone-container">
+  <!-- 灵动岛 -->
+  <div class="dynamic-island"></div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span id="clock-status">18:00</span>
+    <span style="font-size: 12px;">5G 🔋 98%</span>
+  </div>
+
+  <!-- Notification Popup -->
+  <div class="notification-popup" id="notif-popup" onclick="handleNotifClick()">
+    <div class="notif-header">
+      <div class="notif-icon" id="notif-icon" style="background:#fee500; color:#000;">💬</div>
+      <span id="notif-app-name">카카오톡</span>
+      <span style="margin-left:auto;">방금 전</span>
+    </div>
+    <div class="notif-title" id="notif-title">이희승</div>
+    <div class="notif-body" id="notif-body">기사 보지 말고 있어봐요...</div>
+  </div>
+
+  <!-- ================= 锁屏界面 ================= -->
+  <div id="lock-screen">
+    <div style="text-align: center; margin-top: 24px;">
+      <div class="lock-time" id="lock-time-text">18:00</div>
+      <div class="lock-date">10월 25일 일요일</div>
+    </div>
+    <div style="font-size: 13px; opacity: 0.85; animation: pulse 2s infinite;">▲ 위로 쓸어올려서 잠금 해제</div>
+  </div>
+
+  <!-- ================= 密码输入 ================= -->
+  <div id="passcode-screen">
+    <div style="font-size: 15px; font-weight: 500;">비밀번호 입력 (1015)</div>
+    <div class="passcode-dots">
+      <div class="dot" id="dot1"></div>
+      <div class="dot" id="dot2"></div>
+      <div class="dot" id="dot3"></div>
+      <div class="dot" id="dot4"></div>
+    </div>
+    <div class="keypad">
+      <div class="key-btn" onclick="pressKey('1')">1</div>
+      <div class="key-btn" onclick="pressKey('2')">2</div>
+      <div class="key-btn" onclick="pressKey('3')">3</div>
+      <div class="key-btn" onclick="pressKey('4')">4</div>
+      <div class="key-btn" onclick="pressKey('5')">5</div>
+      <div class="key-btn" onclick="pressKey('6')">6</div>
+      <div class="key-btn" onclick="pressKey('7')">7</div>
+      <div class="key-btn" onclick="pressKey('8')">8</div>
+      <div class="key-btn" onclick="pressKey('9')">9</div>
+      <div></div>
+      <div class="key-btn" onclick="pressKey('0')">0</div>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- ================= 桌面 Desktop ================= -->
+  <div id="home-screen">
+    <div class="weather-widget">
+      <div>
+        <div style="font-size: 13px; opacity: 0.85;">서울특별시</div>
+        <div style="font-size: 30px; font-weight: 300;">11°</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 22px;">🌤️</div>
+        <div style="font-size: 11px; opacity: 0.85;">가을 · 구름 조금</div>
+      </div>
+    </div>
+
+    <!-- 拟真 iOS 图标 -->
+    <div class="app-icon-wrap" onclick="openApp('kakaotalk')">
+      <div class="app-icon icon-kkt">TALK</div>
+      <div class="app-name">카카오톡</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('wechat')">
+      <div class="app-icon icon-wx">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M8.5 3C4.36 3 1 5.91 1 9.5c0 2.02 1.05 3.82 2.68 5.06L3 17.5l3.22-1.35c.73.22 1.5.35 2.28.35 4.14 0 7.5-2.91 7.5-6.5S12.64 3 8.5 3zm10 6c-.34 0-.67.02-1 .06 2.36 1.13 4 3.2 4 5.61 0 1.25-.43 2.4-1.18 3.33L22 20.5l-2.02-1.02c-.75.33-1.58.52-2.48.52-3.31 0-6-2.24-6-5s2.69-5 6-5z"/></svg>
+      </div>
+      <div class="app-name">위챗</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('instagram')">
+      <div class="app-icon icon-ig">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </div>
+      <div class="app-name">Instagram</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('twitter')">
+      <div class="app-icon icon-tw">𝕏</div>
+      <div class="app-name">X (트위터)</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('threads')">
+      <div class="app-icon icon-thr">@</div>
+      <div class="app-name">Threads</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('weibo')">
+      <div class="app-icon icon-wb">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <div class="app-name">웨이보</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('naver')">
+      <div class="app-icon icon-nav">N</div>
+      <div class="app-name">네이버</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('photos')">
+      <div class="app-icon icon-pic">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff2d55"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+      </div>
+      <div class="app-name">사진</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('applemusic')">
+      <div class="app-icon icon-mus">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+      </div>
+      <div class="app-name">Music</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('safari')">
+      <div class="app-icon icon-saf">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      </div>
+      <div class="app-name">Safari</div>
+    </div>
+
+    <div class="app-icon-wrap" onclick="openApp('calendar')">
+      <div class="app-icon icon-cal">
+        <span style="font-size: 8px;">OCT</span>
+        <span style="font-size: 18px; color: #000;">15</span>
+      </div>
+      <div class="app-name">달력</div>
+    </div>
+  </div>
+
+  <!-- ================= App Modals ================= -->
+
+  <!-- KakaoTalk -->
+  <div class="app-container kkt-bg" id="app-kakaotalk">
+    <div class="app-header" style="background: #9bbbd4; color: #000;">
+      <span style="cursor:pointer;" onclick="closeApp()">‹ 채팅</span>
+      <span>이희승 (HEESEUNG)</span>
+      <span>📞</span>
+    </div>
+    <div class="app-content" id="kkt-messages" style="display: flex; flex-direction: column; padding: 8px 0;"></div>
+    <div class="chat-input-bar">
+      <input type="text" id="kkt-input" placeholder="메시지 보내기..." onkeydown="if(event.key==='Enter') sendKKTMessage()">
+      <button onclick="sendKKTMessage()">전송</button>
+    </div>
+  </div>
+
+  <!-- WeChat -->
+  <div class="app-container" id="app-wechat" style="background: #111;">
+    <div class="app-header">
+      <span id="wx-title-left" onclick="showWxList()" style="cursor:pointer; color:#07c160; display:none;">‹ 微信</span>
+      <span id="wx-header-title">微信</span>
+      <span>+</span>
+    </div>
+    <div class="app-content" id="wx-content">
+      <div id="wx-list">
+        <div class="wx-item" onclick="openWxChat('aaa')">
+          <div class="wx-avatar">🤪</div>
+          <div style="flex:1;">
+            <div style="font-size: 15px; font-weight: 600;">aaa (宝)</div>
+            <div style="font-size: 12px; color: #888;">宝宝你看了最近那个首尔酱蟹Vlog没有！</div>
+          </div>
+        </div>
+        <div class="wx-item" onclick="openWxChat('mom')">
+          <div class="wx-avatar">👩</div>
+          <div style="flex:1;">
+            <div style="font-size: 15px; font-weight: 600;">妈妈</div>
+            <div style="font-size: 12px; color: #888;">首尔降温了，记得穿厚羽绒服。</div>
+          </div>
+        </div>
+        <div class="wx-item" onclick="openWxChat('dad')">
+          <div class="wx-avatar">👨</div>
+          <div style="flex:1;">
+            <div style="font-size: 15px; font-weight: 600;">爸爸</div>
+            <div style="font-size: 12px; color: #888;">钱不够跟爸说，注意安全。</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="wx-detail" style="display:none; flex-direction:column; height:100%; padding: 10px;">
+        <div id="wx-msg-box" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="chat-input-bar" style="background:#222; border-radius:10px; margin-top:8px;">
+          <input type="text" id="wx-input" placeholder="发送微信消息..." style="background:#333; color:#fff;" onkeydown="if(event.key==='Enter') sendWxMessage()">
+          <button onclick="sendWxMessage()" style="background:#07c160; color:#fff;">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 微博 UI (无图纯文字排版) -->
+  <div class="app-container weibo-body" id="app-weibo">
+    <div class="app-header" style="background:#fff; color:#333; border-bottom:0.5px solid #ddd;">
+      <span onclick="refreshFeed('weibo')" style="cursor:pointer; color:#ff8200;">↻ 刷新</span>
+      <span>微博</span>
+      <span>🔍</span>
+    </div>
+    <div class="weibo-nav">
+      <span class="active">关注</span>
+      <span>热门</span>
+      <span>同城</span>
+    </div>
+    <div class="app-content" id="weibo-feed" style="padding-top:4px;"></div>
+  </div>
+
+  <!-- Threads UI -->
+  <div class="app-container" id="app-threads" style="background: #101010;">
+    <div class="app-header">
+      <span onclick="refreshFeed('threads')" style="cursor:pointer; color:#007aff;">↻ 刷新</span>
+      <span>Threads</span>
+      <span></span>
+    </div>
+    <div class="app-content" id="forum-feed"></div>
+  </div>
+
+  <!-- Instagram (iOS 纯白简约风) -->
+  <div class="app-container ig-body" id="app-instagram">
+    <div class="app-header ig-header">
+      <span id="ig-nav-left" style="cursor:pointer; color:#0095f6; display:none;" onclick="backToIGList()">‹ Direct</span>
+      <span id="ig-header-title" style="font-weight:700;">Instagram</span>
+      <span>✉️</span>
+    </div>
+    <div class="app-content" style="padding: 0;">
+      <div id="ig-main-view">
+        <div class="ig-user-bar">
+          <div class="ig-avatar">👤</div>
+          <div>
+            <div style="font-weight:bold; font-size:14px;">withee</div>
+            <div style="font-size:11px; color:#888;">Seoul, South Korea</div>
+          </div>
+          <button style="margin-left:auto; background:#0095f6; border:none; color:#fff; font-size:12px; font-weight:bold; padding:6px 14px; border-radius:8px;">编辑资料</button>
+        </div>
+        <div class="ig-post-card">
+          <img src="igwithee.jpg" style="width:100%; aspect-ratio:1; object-fit:cover;" onclick="openPhotoFullscreen('igwithee.jpg')">
+          <div style="padding:10px 12px; font-size:13px;">
+            <div style="display:flex; gap:12px; font-size:18px; margin-bottom:6px;">❤️ 💬 ✈️</div>
+            <div style="font-weight:bold;">24,192 次赞</div>
+            <div style="margin-top:2px;"><strong>withee</strong> 늦가을 밤의 한강 🍂 (深秋夜里的汉江)</div>
+          </div>
+        </div>
+        <div id="ig-dm-box" style="padding:12px;">
+          <div style="font-size:13px; font-weight:bold; color:#666; margin-bottom:8px;">Direct Messages (点击英文私信对线):</div>
+        </div>
+      </div>
+
+      <div id="ig-chat-view" style="display:none; flex-direction:column; height:100%; padding:10px; background:#fff;">
+        <div id="ig-chat-history" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="chat-input-bar" style="background:#f1f1f1; border-radius:18px; margin-top:8px;">
+          <input type="text" id="ig-chat-input" placeholder="发送私信..." style="background:transparent; color:#000;" onkeydown="if(event.key==='Enter') sendIGDM()">
+          <button onclick="sendIGDM()" style="background:#0095f6; color:#fff;">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Twitter / X -->
+  <div class="app-container" id="app-twitter" style="background: #000;">
+    <div class="app-header">
+      <span id="tw-nav-left" style="cursor:pointer; color:#1d9bf0; display:none;" onclick="backToTWList()">‹ Messages</span>
+      <span id="tw-header-title">𝕏 (트위터)</span>
+      <span></span>
+    </div>
+    <div class="app-content" style="padding:12px;">
+      <div id="tw-main-view">
+        <div style="font-weight:bold; font-size:15px; margin-bottom:10px;">실시간 트렌드 (韩趋)</div>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; border-bottom:0.5px solid #222; padding-bottom:12px;">
+          <div>1 · 실시간 트렌드 <br><strong style="color:#1d9bf0;">#이희승_열애</strong></div>
+          <div>2 · 트렌드 <br><strong>#최근인기영화</strong></div>
+          <div>3 · 트렌드 <br><strong>#한강산책</strong></div>
+        </div>
+        <div id="twitter-dm-box" style="margin-top:12px;">
+          <div style="font-size:13px; font-weight:bold; color:#888; margin-bottom:8px;">Direct Messages (点击双语私信对线):</div>
+        </div>
+      </div>
+
+      <div id="tw-chat-view" style="display:none; flex-direction:column; height:100%;">
+        <div id="tw-chat-history" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="chat-input-bar" style="background:#1c1c1e; border-radius:12px; margin-top:8px;">
+          <input type="text" id="tw-chat-input" placeholder="回复推特私信..." style="background:#2c2c2e; color:#fff;" onkeydown="if(event.key==='Enter') sendTWDM()">
+          <button onclick="sendTWDM()" style="background:#1d9bf0; color:#fff;">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apple Music (带拖拉控制条) -->
+  <div class="app-container" id="app-applemusic" style="background: #1c1c1e;">
+    <div class="app-header"><span>Death of Me</span></div>
+    <div class="app-content" style="padding:16px; text-align:center;">
+      <img src="p4.jpg" style="width:180px; height:180px; border-radius:12px; object-fit:cover; box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+      <div style="font-size:18px; font-weight:bold; margin-top:12px;" id="playing-title">Ride or Die</div>
+      <div style="color:#fa2d48; font-size:14px; margin-bottom:8px;">이희승 (EVAN)</div>
+      
+      <div class="music-controls-panel">
+        <input type="range" class="music-progress" id="music-bar" min="0" max="100" value="35" oninput="updateMusicTime(this.value)">
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:#888;">
+          <span id="curr-time">1:18</span>
+          <span>3:42</span>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:28px; font-size:22px; margin-top:4px;">
+          <span style="cursor:pointer;">⏮️</span>
+          <span style="cursor:pointer; font-size:28px;" id="play-btn" onclick="togglePlay()">⏸️</span>
+          <span style="cursor:pointer;">⏭️</span>
+        </div>
+      </div>
+
+      <div style="text-align:left; display:flex; flex-direction:column; gap:10px; font-size:14px; margin-top:16px;">
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Not Enough')">1. Not Enough</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Noise')">2. Noise</div>
+        <div style="cursor:pointer; padding:4px 0; color:#fa2d48; font-weight:bold;" onclick="selectSong('Ride or Die')">3. Ride or Die ▶</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Death of Me')">4. Death of Me</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Twilight')">5. Twilight</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Immature')">6. Immature</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Overflow')">7. Overflow</div>
+        <div style="cursor:pointer; padding:4px 0;" onclick="selectSong('Going Home')">8. Going Home</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Naver 购物与订单统计 -->
+  <div class="app-container" id="app-naver" style="background: #121212;">
+    <div class="app-header" style="background:#03cf5d; color:#fff;">
+      <span>NAVER 쇼핑 & 예약</span>
+    </div>
+    <div class="app-content" style="padding:10px;">
+      <div style="background:#03cf5d22; border:1px solid #03cf5d; border-radius:10px; padding:10px; margin-bottom:10px; font-size:13px;">
+        📊 <strong>已消费订单统计：</strong><br>
+        目前已累计消费总额：<span id="total-spent" style="color:#03cf5d; font-weight:bold;">₩0</span> KRW
+      </div>
+
+      <div class="naver-card">
+        <div style="font-weight: bold; color: #03cf5d;">🛒 NAVER 쇼핑 (自定义下单)</div>
+        <input type="text" id="naver-item-name" class="naver-input" placeholder="输入商品名称 (如: 羊绒围巾 / 咖啡豆)">
+        <input type="number" id="naver-item-price" class="naver-input" placeholder="价格 (KRW, 如: 98000)">
+        
+        <div style="font-size: 12px; color: #aaa;">支付卡：
+          <select id="naver-card-choice" style="background:#2c2c2e; color:#fff; border:none; padding:6px; border-radius:6px; width:100%; margin-top:4px;">
+            <option>玩家自己的信用卡</option>
+            <option>李羲承的黑卡 (HEESEUNG)</option>
+          </select>
+        </div>
+
+        <div style="font-size: 12px; color: #aaa;">寄送地址：
+          <input type="text" id="naver-addr-custom" class="naver-input" placeholder="寄送地址 (默认: 李羲承家龙山区)" style="margin-top:4px;">
+        </div>
+
+        <button onclick="buyNaverItem()" style="background:#03cf5d; border:none; color:#fff; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:6px;">구매하기 (确认下单)</button>
+      </div>
+
+      <div class="naver-card">
+        <div style="font-weight: bold; color: #03cf5d;">📦 已下单订单列表</div>
+        <div id="order-list" style="font-size:12px; color:#bbb; display:flex; flex-direction:column; gap:6px;">
+          暂无已完成订单
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 相册 Photos -->
+  <div class="app-container" id="app-photos" style="background: #000;">
+    <div class="app-header"><span>모든 사진</span></div>
+    <div class="app-content">
+      <div class="photos-grid">
+        <img src="p1.jpg" class="photo-item" onclick="openPhotoFullscreen('p1.jpg')">
+        <img src="p2.jpg" class="photo-item" onclick="openPhotoFullscreen('p2.jpg')">
+        <img src="p3.jpg" class="photo-item" onclick="openPhotoFullscreen('p3.jpg')">
+        <img src="p4.jpg" class="photo-item" onclick="openPhotoFullscreen('p4.jpg')">
+        <img src="p5.jpg" class="photo-item" onclick="openPhotoFullscreen('p5.jpg')">
+        <img src="p6.jpg" class="photo-item" onclick="openPhotoFullscreen('p6.jpg')">
+        <img src="p7.jpg" class="photo-item" onclick="openPhotoFullscreen('p7.jpg')">
+        <img src="p8.jpg" class="photo-item" onclick="openPhotoFullscreen('p8.jpg')">
+      </div>
+    </div>
+  </div>
+
+  <div id="photo-fullscreen" onclick="closePhotoFullscreen()">
+    <img id="fullscreen-img" src="">
+  </div>
+
+  <!-- Safari -->
+  <div class="app-container" id="app-safari" style="background: #121212;">
+    <div class="app-header"><span>검색 기록</span></div>
+    <div class="app-content" style="padding: 16px;">
+      <div style="background: #1c1c1e; border-radius: 12px; overflow: hidden;">
+        <div style="padding: 14px; border-bottom: 0.5px solid #333;">
+          <div style="font-size: 15px; color: #29b6f6;">서울 카페 추천</div>
+          <div style="font-size: 12px; color: #aaa; margin-top: 2px;">首尔咖啡厅推荐</div>
+        </div>
+        <div style="padding: 14px; border-bottom: 0.5px solid #333;">
+          <div style="font-size: 15px; color: #29b6f6;">기념일 어떻게 보내요</div>
+          <div style="font-size: 12px; color: #aaa; margin-top: 2px;">纪念日怎么过</div>
+        </div>
+        <div style="padding: 14px;">
+          <div style="font-size: 15px; color: #29b6f6;">남자친구가 아이돌이면 어떡해요</div>
+          <div style="font-size: 12px; color: #aaa; margin-top: 2px;">男朋友是爱豆怎么办</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="app-container" id="app-calendar" style="background: #000;">
+    <div class="app-header"><span>2026년 10월</span></div>
+    <div class="app-content" style="padding: 16px;">
+      <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:10px; text-align:center; font-size:14px;">
+        <span style="color:#ff3b30;">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+        <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+        <span style="background:#ff3b30; color:#fff; border-radius:50%; font-weight:bold;">15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+        <span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span>
+        <span>29</span><span>30</span><span>31</span>
+      </div>
+      <div style="margin-top:20px; background:#1c1c1e; padding:12px; border-radius:10px; font-size:13px; color:#ff3b30;">
+        📌 10월 15일: 이희승 Birthday 🎂
+      </div>
+    </div>
+  </div>
+
+  <!-- 悬浮 Home Bar -->
+  <div class="home-indicator-bar" onclick="closeApp()"></div>
+</div>
+
+<script>
+  /* 用户提供的 100 个粉丝用户名 */
+  const realUsernames = [
+    "heeseung_luv", "hee_myworld", "seungie_pie", "heeseung_forever", "only_heeseung",
+    "hee_holic", "seungseung_ie", "heeseung_daily", "hee_angel", "seungie_bear",
+    "heeseung_heart", "hee_sunshine", "seung_luvbot", "heeseung_4ever", "hee_myboy",
+    "seungie_cloud", "heeseung_zone", "hee_star", "seungie_moon", "heeseung_pink",
+    "hee_heeseung", "seungie_honey", "heeseung_1pick", "hee_dream", "seungie_glow",
+    "heeseung_ice", "hee_bunny", "seungie_cat", "heeseung_soft", "hee_melody",
+    "seungie_peach", "heeseung_cherry", "hee_cloud9", "seungie_sky", "heeseung_smile",
+    "hee_light", "seungie_flower", "heeseung_gem", "hee_boo", "seungie_love",
+    "heeseung_only1", "hee_oppa", "seungie_bb", "heeseung_world", "hee_myhealing",
+    "seungie_diary", "heeseung_vibe", "hee_sweet", "seungie_angel", "heeseung_glow",
+    "hee_seung", "seungie_luvly", "heeseung_stan", "hee_4u", "seungie_magic",
+    "heeseung_wink", "hee_purple", "seungie_dream", "heeseung_honey", "hee_babie",
+    "seungie_forever", "heeseung_lovee", "hee_myprince", "seungie_star", "heeseung_moonlight",
+    "hee_sunflower", "seungie_heartbeat", "heeseung_cloudy", "hee_myonly", "seungie_bubble",
+    "heeseung_petit", "hee_lovely", "seungie_sugar", "heeseung_flower", "hee_myday",
+    "seungie_hope", "heeseung_joy", "hee_seungie", "seungie_daisy", "heeseung_rainbow",
+    "hee_myheart", "seungie_softie", "heeseung_bbang", "hee_cookie", "seungie_candy",
+    "heeseung_lullaby", "hee_mystar", "seungie_pearl", "heeseung_butterfly", "hee_myangel",
+    "seungie_sunshine", "heeseung_memories", "hee_seungluv", "seungie_healing", "heeseung_forever1",
+    "hee_heeseungie", "seungie_lovelove", "heeseung_myworld", "hee_seungiebb", "seungie_heeseung"
+  ];
+
+  /* 用户提供的 IG 100条英文私信 */
+  const igDMs = [
+    "Who the hell are you and how did you even get his number?",
+    "Drop the timeline. Right now. When did you two actually start dating?",
+    "Are you a civilian or an idol? Because if you’re clout-chasing, pack your bags.",
+    "Do you even know how much we spent on his albums? How much did YOU spend?",
+    "Are you the one from the Japan trip or the Seoul trip? Be honest.",
+    "So who confessed first? If he did, he’s an idiot. If you did, you’re a snake.",
+    "Are you actually dating or is this just a prank? Because I swear to God...",
+    "How long have you been lurking in his DMs before you got a reply?",
+    "Are you the girl in the reflection of the mirror selfie? Don't lie to me.",
+    "How do you sleep at night knowing you're ruining his career?",
+    "I just need to know one thing: did you buy that matching necklace or did he?",
+    "Are you the reason he looked so tired at the airport yesterday?",
+    "Is your name in his phone under a fake contact? What is it?",
+    "Are you gonna make him post a handwritten apology when this blows up?",
+    "How old are you? Because you're acting like a middle schooler stealing someone's boyfriend.",
+    "Are you going to let him post his selcas or are you the jealous type?",
+    "Do you have a private account? Send the link so I can see what kind of girl you are.",
+    "Have you met the other members? Did they approve of you?",
+    "Are you forcing him to be quiet on Bubble so you can have his attention?",
+    "How much did he pay for your anniversary gift? I want a receipt.",
+    "Are you the one who made him change his hair color? It looks terrible.",
+    "Are you going to take him away from us after his contract ends?",
+    "Did you know he has a schedule tomorrow? Why are you keeping him up?",
+    "Are you the 'friend' he was spotted with at the PC bang?",
+    "Just tell me the truth: are you a sasaeng? Because if you are, you're dead.",
+    "Wow, so happy for you. Truly. Hope the high lasts before he gets dragged by the entire fandom.",
+    "Congrats on bagging an idol! Now enjoy getting ripped to shreds by his stans. ❤️",
+    "You must feel so special, huh? Taking up the time he should be practicing.",
+    "So cute how you think this is going to last. The 'idol girlfriend' curse is real, babe.",
+    "Bestie, you are NOT ready for the hellfire that’s coming for your IP address.",
+    "I hope you like your socials going private, because we will find everything. 😂",
+    "It’s so sweet how he’s wasting his prime years on you instead of making music. So romantic!",
+    "Oh, so YOU'RE the reason my albums are delayed? Great. Thanks a lot.",
+    "I bet you feel so pretty holding hands with a guy who doesn't even know your real name on the internet.",
+    "Are you guys going to get matching tattoos next? Please do, it makes it easier for us to track you.",
+    "I hope his company throws you under the bus. They usually do.",
+    "You’re so lucky! You get to be hated by millions of teenage girls. Dream come true!",
+    "Honestly, if I were you, I would just deactivate. Save yourself the trauma.",
+    "We saw the photo. The blurry one. We already know what you look like. You're mid anyway.",
+    "He really downgraded from his fans to you? That’s kinda sad.",
+    "Girl, run. Run while you still can. His fans will literally end you.",
+    "Did you have to ruin the group dynamic? Couldn't you just be a normal fan and go to a fansign?",
+    "Tell him to pay me back for the lightstick I bought with my own money.",
+    "I hope you guys are happy together, because nobody else is. 😂",
+    "You're the 'girlfriend'? You look like a backup dancer, no offense.",
+    "Hope the 15 minutes of fame is worth getting doxxed.",
+    "He's gonna drop you the second the company gives him an ultimatum. Just wait.",
+    "It's cute that you think he's gonna choose you over his career. Delusional.",
+    "Are you going to make him cook for you too? Poor guy can barely boil water.",
+    "The fandom is on a warpath. Pray for your mentions.",
+    "We literally funded his entire lifestyle and this is how he repays us? With you?",
+    "I am SO mad right now. Not at you, but at him for being such a weak, careless idiot.",
+    "Do you know how many nights we stayed up streaming for him? And he's out buying you dinner?",
+    "This is the biggest betrayal. I want a refund. I want my time back.",
+    "You are the worst thing that has ever happened to this fandom.",
+    "Get away from him. You don't deserve him. You didn't go through the survival show with him.",
+    "You have no idea what he went through to get here and you're just going to ruin it.",
+    "If he drops out of the comeback because of you, I will find you.",
+    "We tolerated his gaming, we tolerated his weird habits, but we will NOT tolerate you.",
+    "Do you know how much hate I got defending his pure image? And now it's all a lie.",
+    "He's ruining everything we built for a girl who probably only listens to his title tracks.",
+    "We are his real family. You are just a temporary distraction. Remember that.",
+    "I hope your mom sees you trending for dating a K-pop star and reads the qrts.",
+    "You're not special. You're just the first girl who threw herself at him when he was vulnerable.",
+    "Don't you dare show your face at any of his concerts. You will get booed.",
+    "We own his image. You're just borrowing his time.",
+    "How dare you take his attention away from the fans? He owes us everything.",
+    "I am crying my eyes out and he's probably laughing with you. I hate you both.",
+    "This is why idols shouldn't date. You're all the same.",
+    "Did you even watch his fancams or did you just see the face and open your legs?",
+    "I want the old Heeseung back. The one who only cared about music and fans. Give him back.",
+    "If he loses his endorsement deals because of you, I hope he makes you pay for it.",
+    "I've never been so disgusted in my life. Disband the group. It's over.",
+    "You are a homewrecker. Not of a marriage, but of a parasocial relationship. And that hurts more.",
+    "I hope the company releases a dating ban extension just because of you.",
+    "girl what are u doing 😭😭😭 give his phone back and let him post on bbl",
+    "i'm actually screaming crying throwing up who tf are u 😭",
+    "we're gonna need a face reveal immediately or i'm pressing charges",
+    "this has to be a prank right? right??? don't gaslight me rn",
+    "💀💀💀 not the dispatch photos. u are COOKED.",
+    "respectfully, get lost. we don't claim u here.",
+    "bestie u better have a private ig cuz we're coming for ur mutuals",
+    "he's literally in the trenches rn and u are making it worse 😭",
+    "i bet u don't even know his debut date. fake gf.",
+    "pls delete ur account and go touch some grass before the fandom touches u",
+    "it’s giving clout chaser. it’s giving sasaeng. it’s giving tragic.",
+    "i’m sobbing what is this timeline i cannot breathe",
+    "girl u won the battle but u lost the war. the fans will never accept u 😭",
+    "drop the skincare routine bc how did u bag HIM???",
+    "i am inside ur walls. delete the matching post. now. 💀",
+    "the way u probably forced him to wear that hello kitty shit... i'm sick",
+    "ok but does he still stream his own music or is he too busy with u 🙄",
+    "u are literally the villain origin story of every girl in this fandom",
+    "i'm gonna need u to step aside. the group is my roman empire and u are destroying it.",
+    "we will be waiting outside the dorms. not to see him. to see YOU.",
+    "tell him to unblock my main or i'm exposing the hotel pics.",
+    "this is my villain arc. i am unwell. i am spiraling. block me.",
+    "girl get off the internet and go study for ur exams u are NOT a celebrity",
+    "we all know u're just a rebound. the fans are forever. 😍",
+    "i hope u stub ur toe on every corner for the rest of ur life. ❤️"
+  ];
+
+  /* 用户提供的 Twitter 100条私信 */
+  const twDMs = [
+    "图他啥？图他帅图他糊还是图他粉丝能把你撕上热搜？",
+    "언제부터 사귄 거야? 타임라인 안 맞으면 끼어든 걸로 간주할게",
+    "你俩最好是真的，不然连累他被骂，我第一个不放过你。",
+    "오빠 팬들이 얼마나 썼는데 언니는 뭐 했어? 꿈 꿨어?",
+    "空手套白狼是吧？专辑买了几张？应援做了几次？谈什么恋爱。",
+    "숨지 마라, 나와서 말해, 숨으면 없는 일이 되나? 인터넷은 기억해",
+    "别装死，出来说话，躲着就能当没谈过？互联网有记忆的。",
+    "멘탈 단단히 해라, 앞으로 오는 DM이 나처럼 순한 맛일 거라 생각하지 마",
+    "他合约还有几年你算过吗？你俩能撑到那时候我直播倒立洗头。",
+    "사진 원본으로 보내, 보정하면 바로 티 나니까 그땐 각오해라",
+    "合照发原图，别修，修了我一眼看出来你就等着吧。",
+    "오빠 팬 중에 여친팬 몇 명인지 알아? 지뢰밭에서 춤추는 거야",
+    "他瘦成那样你照顾了吗？没有你谈什么恋爱，谈了个寂寞。",
+    "데이트 누가 계산해? 오빠가 내면 연애뇌라 욕하고, 언니가 내면 들이대는 거라 욕해",
+    "别拿他炒作，一个字都别发，发了我当你宣战。",
+    "멘탈 몇 급이야? 미리 예고하는데 댓창이 DM보다 열 배 독해",
+    "他熬了多少年才到今天你清楚吗？你一句话就能给他干回解放前。",
+    "여기까지 오는데 몇 년 걸렸는지 알아? 네 한마디면 개벽 전으로 돌아가",
+    "你俩认真的？认真的我祝你们好，不认真的我祝你们更好，好到一起糊。",
+    "팬덤 이름 알아? 모르면 알려줄게, “건드리면 큰일 나는 사람들”이야",
+    "微博能不能设个可见？我朋友有点多，怕你顶不住。",
+    "군대 언제 가는지 알아? 이건 장난 아니야, 막으면 나랑 끝까지 간다",
+    "兵役你耽误得起吗？这个不能开玩笑，耽误了我跟你没完。",
+    "두 분 싸우면 소논문 써? 쓰면 캡처해서 데이터로 쓸게, 고마워",
+    "初恋是你吗？不是的话我骂词得重新写，你先别急。",
+    "오빠 광고 몇 개인지 알아? 하나 빠지면 네가 하나 배상해, 못 하면 닥쳐",
+    "合照别发，发了我就得加班，加班我就更恨你。",
+    "무대 봐? 안 보면 사랑한다고 말하지 마, 보면 네가 자격 있어?",
+    "在一起他给你写歌没？写了算你有本事，没写你就是个摆设。",
+    "팬 몇 살인지 알아? 미친 사람들이랑 싸우는 거야, 이길 수 있어?",
+    "会分手吗？分了更麻烦，不分我更烦，你自己想。",
+    "요즘 상태 이상한 거 눈치챘어? 못 챘으면 연애 뭐 하러 해, 공기랑 사귀지",
+    "接受天天被骂吗？不接受建议现在就分，省得大家费劲。",
+    "얼마나 됐어? 얼버무리지 마, 다 파낼 수 있어",
+    "知不知道他粉丝做过多少应援？你做过啥？做过梦？",
+    "게임 못해도 참견하지 마, 못해도 너보다 나아",
+    "能别去人多的地方吗？我朋友在那边，撞见了我尴尬你也尴尬。",
+    "탈퇴 안 하게 보장할 수 있어? 못 하면 당장 꺼져, 팀 끌고 가지 말고",
+    "官宣吗？官宣我就当不知道，不官宣我就当没这事，你选个死法。",
+    "팬들이 얼마나 과금하는지 알아? 이길 수 있어? 못 이기면 꼬리 내려",
+    "好好的行，但别让我看见，看见一次我疯一次。",
+    "뭘 노리는지 몰라도 팬 돈 노리면 죽는 줄 알아",
+    "掉粉你负责吗？负责不了就闭嘴，别在这装无辜。",
+    "연애해도 컴백 늦추지 마, 늦추면 넌 팀의 죄인이야",
+    "知不知道他粉丝的底线？我告诉你，没有底线，所以你小心点。",
+    "가방 사줬어? 사줬으면 연애뇌, 안 사줬으면 너도 그 정도야",
+    "合照修图了吧？修了就别发，发了就是自取其辱。",
+    "욕 먹을 수 있어? 못 먹으면 지금 계정 삭제해",
+    "合约到期你俩还在一起吗？在一起我敬你是条汉子。",
+    "입 닥쳐, 말하면 나 열 받아, 가만히 있는 게 오빠한테 제일 큰 도움이야",
+    "这位置你坐得稳吗？坐不稳就下来，后面排队的多的是。",
+    "떨어지는 리소스 안 아까워? 안 아까우면 진짜 사랑이 아니야",
+    "粉丝熬夜打投的时候你在干嘛？在跟他聊天？你挺会挑时候啊。",
+    "팬들이 울었던 거 알아? 넌 울어봤어? 안 울었으면 사랑한다고 하지 마",
+    "分手了别发小作文，发了我就当你蹭热度，蹭一次骂一次。",
+    "게임 못하는 거 嫌弃해? 嫌弃면 헤어져, 다음 사람 찾게",
+    "约会别发定位，发了我就当你挑衅，挑衅我就接。",
+    "얼마나 미쳤는지 알아? 모르면 내가 지금 보여줄게",
+    "在一起他给你唱摇篮曲没？唱了算你有福气，没唱你也就那样。",
+    "팬들 단톡방에 넣어줄까? 인생의 진실을 느끼게 해줄게",
+    "掉代言你赔吗？赔不起就别谈，谈了就是害他。",
+    "조용히 해, 조용하면 참아주는데 시끄러우면 바로 입 털 거야",
+    "粉丝的战斗力你想象不到，你现在跑还来得及。",
+    "돈 썼어? 얼마 썼어? 안 썼으면 입 다물어",
+    "状态不好你看得出来吗？看不出来你谈什么恋爱，谈了个寂寞。",
+    "싸우지 마, 팬들 끌어들이면 선전포고로 간주할 거야",
+    "粉丝为他花了多少钱你知道吗？你不知道，你也不配知道。",
+    "이번 컴백 버틸 수 있어? 못 버티면 헤어져, 꼴 보기 싫으니까",
+    "给你写歌没？写了我就认，没写你就是个路人甲。",
+    "살 쪘어 빠졌어? 빠졌으면 네가 못 챙긴 거고, 쪘으면 네가 방해한 거야",
+    "底线就是没有底线，所以你最好别试探。",
+    "사진 보정했지? 했으면 올리지 마, 자폭이야",
+    "打游戏别拦着，拦了我就当你控制欲强，控制欲强我就骂。",
+    "공공장소에서 애정행각 하지 마, 하면 도발이야, 나는 받아줄 거야",
+    "粉丝熬夜应援的时候你在睡觉？你挺会享受啊",
+    "앨범 샀어? 샀으면 오빠가 바보, 안 샀으면 네가 바보",
+    "掉粉你负责吗？负责不了就闭嘴，别在这装无辜",
+    "조용히 해, 시끄러우면 바로 입 털 거야",
+    "粉丝的战斗力你想象不到，你现在跑还来得及",
+    "돈 썼어? 얼마 썼어? 안 썼으면 입 다물어",
+    "状态不好你看得出来吗？看不出来你谈什么恋爱",
+    "싸우지 마, 팬들 끌어들이면 선전포고야",
+    "粉丝为他花了多少钱你知道吗？",
+    "这次回归你打算怎么收场？",
+    "给你写歌没？写了算你有本事",
+    "胖了瘦了都是你在折腾他",
+    "底线被你踩烂了",
+    "照片原图拿出来",
+    "别拦着他打游戏",
+    "公开秀恩爱就是在挑衅",
+    "粉丝熬夜的时候你在干嘛",
+    "专辑买了多少张？",
+    "掉粉和塌房你选一个吧",
+    "快点出来给个交代",
+    "战斗力让你见识一下",
+    "花钱了吗你就配谈",
+    "状态这么差还谈恋爱",
+    "别牵扯无辜队友",
+    "你根本不配得到他的爱",
+    "等着收律师函吧",
+    "闭嘴吧你",
+    "立刻马上分手"
+  ];
+
+  /* 用户提供的 50 条微博帖子 (无图) */
+  const wbPosts = [
+    "【🧹】不是,这情侣手链都戴到签售会上来了？是故意挑衅粉丝吗？以为袖子遮一下就看不见了？",
+    "花期真的be了。。。",
+    "【🧹】我请问那个同款戒指是认真的吗？在泡泡里发那种模棱两可的话，原来是在跟嫂子隔空喊话啊",
+    "卧槽什么鬼",
+    "【🧹】我说怎么最近安可场状态那么差，原来心思全在谈恋爱上啊",
+    "转发留友看",
+    "【🧹】真的绝了，以前还会营业发点自拍，现在推特全是敷衍。也是，时间都拿去陪真嫂子了，哪还有空媚粉啊",
+    "感觉是ai",
+    "【🧹】快醒醒吧，人家有嫂子，哥哥晚上还要陪嫂子打双排呢，谁有空理你们这群母单",
+    "结构真的be了。。。",
+    "【🧹】求解码，这个hello kitty的行李箱到底是谁的？反正肯定不是那个每天在镜头前装直男的小哥哥的吧",
+    "卧槽卢关快看啊",
+    "【🧹】保镖大哥也是挺辛苦的，不仅要防私生，还要防粉丝看嫂子。嫂子一出来，马上围成人墙，这待遇顶流都没这么好吧😂",
+    "这是彻底不藏了吗？？？一次两次还能解释，我们这位嫂嫂前几天刚去吃了饭还专门发了快拍",
+    "【🧹】只要不瞎都能看出来这背景是同一个地方吧？同一家咖啡店，同一个角度，非得等大头照爆出来才肯承认吗？",
+    "空口鉴嫂？？？",
+    "【🧹】真的别怪大家生气，这行程连轴转，你还能抽出时间单独行动去约会，这时间管理大师啊。你哪怕装一下累呢？",
+    "🚬",
+    "【🧹】到底是多大的魅力能让小哥哥在上升期这么恋爱脑啊？年初我还以为你们彻底断了，结果没看住又搅和在一起了，真是没救了。",
+    "总比现脚盆黑料好点",
+    "【🧹】突然发一张这种图，是不是觉得粉丝都是傻子啊？这反光镜里的影子，拿着手机拍照的长发是谁呀？你是不小心还是故意的？",
+    "罗 求解码",
+    "【🧹】看这外套，眼熟吗？前天机场是不是刚穿过？怎么第二天就披在别人身上了？真是不把我们当外人",
+    "结契真的be了。。。",
+    "【🧹】不是，怎么每次被拍到都是这种带点试探性的图啊？是不是在试探粉丝底线？什么时候准备放高清无码大图 我都替你着急",
+    "锐化的原因吧",
+    "【🧹】真的没人觉得最近他发的东西风格变了吗？连滤镜都换了",
+    "想到法过我就生气",
+    "【🧹】投稿：在梨泰院碰到了，旁边那个长头发的女生，戴着帽子，看不清脸但是身高很搭",
+    "嫂嫂能不能出来说句话",
+    "【🧹】在美国公演完单独行动干嘛去了？别说是去买汉堡了，汉堡店可没有漂亮姐姐",
+    "花期彻底be了。。。",
+    "【🧹】这很难评，我祝你俩成功吧。本来想再陪你走一段的，但是看到你跟嫂子同游日本还去海边拍照，这料手里有的人不止我一个，等着爆吧。",
+    "什么鬼看完演唱会居然真的谈上了",
+    "【🧹】粉丝天天在超话里做数据、切瓜、买专，小哥哥倒好，美美谈恋爱，被拍到了还要粉丝去给你擦屁股。心疼我那几万块钱，不如喂狗。",
+    "结构彻底be了。。。",
+    "【🧹】这衣服，这帽子，这口罩，哪怕你裹成个粽子我也认得出你。旁边那个女生手上的包，是你代言的牌子吧？用代言换的？",
+    "卧槽我服了",
+    "【🧹】别捂嘴了，大粉都在私下里打听呢，只不过没发出来而已。既然被发现了，就体面点，别再拉着队友卖团魂了，看着反胃。",
+    "留友哭",
+    "【🧹】真嫂子别藏了，出来走两步呗。既然都这么忍不住暗戳戳秀了，干脆官宣算了，反正你也舍不得他那点流量，他也舍不得你，就锁死吧。",
+    "【🧹】小哥哥这口罩是不打算戴了是吧？在首尔街头这么搂着",
+    "【🧹】闹半天原来是嫂子是ever还在看演唱会啊？还以为是哪个特别低调的工作人员呢，这偷偷摸摸的眼神拉丝，真以为大家看不出来？",
+    "【🧹】我请问呢？在日本行程这么满，还有空去海边当双人摄影师",
+    "【🧹】投稿：前阵子偶遇了，本来还以为看错了，结果看那走位护着女生的样子，不是你家哥哥是谁？粉丝还在那洗是工作人员呢，你家工作人员下班了还要挽着手走啊？",
+    "【🧹】这克罗心项链是同一条吧。我也连做旧的程度都一模一样啥意思",
+    "【🧹】最新消息，听朋友说在首尔林附近看到了，手牵手呢。没带口罩，照片我就不放了，粉丝自己去偶遇吧，别再闭着眼睛装瞎了。",
+    "【🧹】嫂子这眼光不错啊，这包挺贵的吧？是不是小哥哥拿粉丝送的钱买的呀？如果是的话，建议你俩赶紧双宿双飞，别祸害粉丝了。",
+    "【🧹】把那男的搞得每天惴惴不安的，真觉得这关系健康啊？",
+    "【🧹】我真的需要一个小哥哥能睡的低枕链接，这谈恋爱的瓜吃下来，我脖子都看酸了，嫂子这都不管管他的吗？"
+  ];
+
+  /* 用户提供的 30 条 Threads 帖子 */
+  const thrPosts = [
+    "恋还是练", "落寞哭了。。。", "卧槽花期真的be了", "前队友粉能不能滚", "卧槽结构真的be了",
+    "fsh又欠钱了扔这个出来？", "那个卢关陪我李涛", "女孩们别伤心，抽卢关喝奶茶", "卧槽嫂嫂也有脆",
+    "偷偷藏不住", "接🧹追星运。。。", "想到法过我就生气", "总比现脚盆黑料好点", "感觉是ai",
+    "锐化的原因吧", "空口鉴嫂？？？", "嫂嫂能不能出来说句话", "什么鬼看完演唱会居然真的谈上了",
+    "卧槽我服了", "留友哭", "蜜蜜们首尔这个好好吃", "卧槽我那天也在汉江啊", "留友鉴", "西八",
+    "卧槽我求求你了", "谁敢点开脱粉测", "你再牛坤你能忍住不看嫂嫂主页？", "大哥哥可我还是好想你",
+    "你们到底有啥任务？", "我的河道好精彩。。."
+  ];
+
+  let gameState = {
+    stage: 1,
+    passcodeEntered: "",
+    correctPasscode: "1015",
+    activeNotifTarget: "kakaotalk",
+    currentWxPerson: "aaa",
+    currentIGUser: null,
+    currentTWUser: null,
+    totalSpent: 0,
+    orders: [],
+    isPlaying: true,
+    dmData: {},
+    twDmData: {},
+    kktHistory: [
+      { sender: "other", kr: "오늘 연습 일찍 끝났어요.", cn: "今天练习提前结束了。" },
+      { sender: "other", kr: "날씨 많이 추운데 옷 따뜻하게 입었어요?", cn: "天气蛮冷的，衣服穿得够暖和吗？" },
+      { sender: "me", kr: "", cn: "嗯，刚刚在汉江散步的时候风有点大，不过还好。" },
+      { sender: "other", kr: "한강이요? 이 시간에 혼자?", cn: "汉江？这个时间一个人吗？" },
+      { sender: "other", kr: "잠시만요. 근처면 내가 갈게요.", cn: "稍微等我一下。如果在附近的话我现在过去。" },
+      { sender: "me", kr: "", cn: "不用的，你刚才不是说刚结束练习会很累吗？" },
+      { sender: "other", kr: "얼굴 잠깐보는 건 안 피곤해요.", cn: "见你一面可不会觉得累。" },
+      { sender: "other", kr: "벤치 부근에 있어요? 지나치지 말고 그대로 있어요.", cn: "是在长椅附近吗？别走开，就在那里等我。" },
+      { sender: "me", kr: "", cn: "好，我戴着白色的围巾。" },
+      { sender: "other", kr: "보여요. 뒤돌아보지 마요. 바람 들이쳐요.", cn: "我看到了。别转头，风太大。" },
+      { sender: "other", kr: "손 차갑죠. 주머니에 손 넣고 있어봐요.", cn: "手很冰吧。先放进外套口袋里。" },
+      { sender: "me", kr: "", cn: "今天的演唱会彩排辛苦啦，昨天舞台超级棒。" },
+      { sender: "other", kr: "고마워요. 실은 무대 위에서 계속 생각났어요.", cn: "谢谢。其实在舞台上的时候，脑子里一直在想你。" },
+      { sender: "other", kr: "다음에 올 땐 꼭 따뜻한 음료 사줄게요.", cn: "下次来的话，一定买杯热饮给你。" },
+      { sender: "me", kr: "", cn: "回去的路上注意安全，到了告诉我。" },
+      { sender: "other", kr: "응, 도착했어요. 오늘 밤엔 내 꿈꿔요.", cn: "嗯，到了。今晚梦到我吧。" }
+    ]
+  };
+
+  /* 锁屏与密码 */
+  const lockScreen = document.getElementById('lock-screen');
+  const passcodeScreen = document.getElementById('passcode-screen');
+  lockScreen.addEventListener('click', () => { passcodeScreen.style.display = 'flex'; });
+
+  function pressKey(num) {
+    if (gameState.passcodeEntered.length < 4) {
+      gameState.passcodeEntered += num;
+      updateDots();
+      if (gameState.passcodeEntered.length === 4) {
+        if (gameState.passcodeEntered === gameState.correctPasscode) {
+          setTimeout(() => {
+            passcodeScreen.style.display = 'none';
+            lockScreen.style.transform = 'translateY(-100%)';
+          }, 200);
+        } else {
+          setTimeout(() => { gameState.passcodeEntered = ""; updateDots(); }, 300);
+        }
+      }
+    }
+  }
+
+  function updateDots() {
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById(`dot${i}`).classList.toggle('filled', i <= gameState.passcodeEntered.length);
+    }
+  }
+
+  /* App 路由管理 */
+  function openApp(appId) {
+    if ((appId === 'instagram' || appId === 'twitter') && gameState.stage === 1) {
+      gameState.stage = 2;
+      triggerStageTwoBombardment();
+    }
+    const target = document.getElementById(`app-${appId}`);
+    if (target) target.style.display = 'flex';
+  }
+
+  function closeApp() {
+    document.querySelectorAll('.app-container').forEach(app => app.style.display = 'none');
+  }
+
+  function handleNotifClick() {
+    document.getElementById('notif-popup').classList.remove('show');
+    openApp(gameState.activeNotifTarget);
+  }
+
+  function showNotif(appName, title, body, target) {
+    gameState.activeNotifTarget = target;
+    document.getElementById('notif-app-name').innerText = appName;
+    document.getElementById('notif-title').innerText = title;
+    document.getElementById('notif-body').innerText = body;
+    const popup = document.getElementById('notif-popup');
+    popup.classList.add('show');
+    setTimeout(() => popup.classList.remove('show'), 3500);
+  }
+
+  /* KKT 渲染 */
+  function renderKKT() {
+    const box = document.getElementById('kkt-messages');
+    box.innerHTML = '';
+    gameState.kktHistory.forEach(msg => {
+      const wrap = document.createElement('div');
+      wrap.className = `chat-bubble-wrap ${msg.sender}`;
+      let html = `<div class="chat-bubble">`;
+      if (msg.sender === 'other') html += `<div>${msg.kr}</div><div class="translation-sub">${msg.cn}</div>`;
+      else html += `<div>${msg.cn}</div>`;
+      html += `</div>`;
+      wrap.innerHTML = html;
+      box.appendChild(wrap);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendKKTMessage() {
+    const input = document.getElementById('kkt-input');
+    const text = input.value.trim();
+    if (!text) return;
+    gameState.kktHistory.push({ sender: 'me', kr: '', cn: text });
+    input.value = '';
+    renderKKT();
+
+    setTimeout(() => {
+      let reply = { kr: "천천히 말해요. 다 듣고 있어요.", cn: "慢慢说，我一直都在听着呢。" };
+      if (gameState.stage === 2) {
+        reply = { kr: "기사 보지 말고 있어봐요. 내가 정리하고 있으니까 너무 걱정하지 마요.", cn: "先别看新闻。我在处理，不要太担心。" };
+      }
+      gameState.kktHistory.push({ sender: 'other', kr: reply.kr, cn: reply.cn });
+      renderKKT();
+      showNotif('카카오톡', '이희승', reply.kr, 'kakaotalk');
+    }, 1400);
+  }
+
+  /* 微信对话 */
+  const wxData = {
+    aaa: [
+      { sender: 'other', text: '宝宝！你看了最近那个首尔酱蟹Vlog没有！' },
+      { sender: 'me', text: '看了呀，感觉好好吃！' },
+      { sender: 'other', text: '对吧对吧！你这次看演唱会顺便去吃了没？' },
+      { sender: 'me', text: '吃了吃了，就在弘大附近那家！' },
+      { sender: 'other', text: '羡慕哭了女孩！李羲承现场绝不绝？' },
+      { sender: 'me', text: '绝到我没说话……真的超级有张力。' },
+      { sender: 'other', text: '不亏是我宝！对了，首尔现在冷不冷啊？' },
+      { sender: 'me', text: '风蛮大的，晚上散步得戴围巾。' },
+      { sender: 'other', text: '那你多穿点，别冻感冒了！' },
+      { sender: 'me', text: '知道啦么么！' },
+      { sender: 'other', text: '等回国了必须请我吃烤肉！' },
+      { sender: 'me', text: '没问题，安排！' },
+      { sender: 'other', text: '对了，你最近看那部新韩剧没？' },
+      { sender: 'me', text: '看了前两集，氛围感蛮好。' },
+      { sender: 'other', text: '好看就安利我，我今晚追！' },
+      { sender: 'me', text: '好咧，等会儿发你链接。' }
+    ],
+    mom: [
+      { sender: 'other', text: '女儿啊，首尔那边冷不冷？' },
+      { sender: 'me', text: '有点风，不过我穿得很暖和！' },
+      { sender: 'other', text: '那就好，吃得惯那边的饭吗？' },
+      { sender: 'me', text: '吃得习惯，今天吃了热乎乎的雪浓汤。' },
+      { sender: 'other', text: '照顾好自己，注意安全。' }
+    ],
+    dad: [
+      { sender: 'other', text: '钱不够随时跟爸说，安全第一。' },
+      { sender: 'me', text: '收到，谢谢爸！' }
+    ]
+  };
+
+  function openWxChat(person) {
+    gameState.currentWxPerson = person;
+    document.getElementById('wx-list').style.display = 'none';
+    document.getElementById('wx-detail').style.display = 'flex';
+    document.getElementById('wx-title-left').style.display = 'inline';
+    renderWechat(person);
+  }
+
+  function showWxList() {
+    document.getElementById('wx-list').style.display = 'block';
+    document.getElementById('wx-detail').style.display = 'none';
+    document.getElementById('wx-title-left').style.display = 'none';
+  }
+
+  function renderWechat(person) {
+    const box = document.getElementById('wx-msg-box');
+    box.innerHTML = '';
+    (wxData[person] || []).forEach(m => {
+      const div = document.createElement('div');
+      div.style.alignSelf = m.sender === 'me' ? 'flex-end' : 'flex-start';
+      div.style.background = m.sender === 'me' ? '#95ec69' : '#2c2c2e';
+      div.style.color = m.sender === 'me' ? '#000' : '#fff';
+      div.style.padding = '8px 12px';
+      div.style.borderRadius = '8px';
+      div.style.fontSize = '14px';
+      div.innerText = m.text;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendWxMessage() {
+    const input = document.getElementById('wx-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const p = gameState.currentWxPerson;
+    wxData[p].push({ sender: 'me', text: text });
+    input.value = '';
+    renderWechat(p);
+
+    setTimeout(() => {
+      let r = "收到啦！";
+      if (p === 'aaa') r = gameState.stage === 2 ? "宝宝！你推特和IG被黑粉扒了你快看！" : "哈哈哈哈太好笑了宝！";
+      wxData[p].push({ sender: 'other', text: r });
+      renderWechat(p);
+      showNotif('微信', p === 'aaa' ? 'aaa (宝)' : (p==='mom'?'妈妈':'爸爸'), r, 'wechat');
+    }, 1300);
+  }
+
+  /* 独立渲染微博（无图片）和 Threads 动态 */
+  function renderFeeds() {
+    const wbBox = document.getElementById('weibo-feed');
+    const thrBox = document.getElementById('forum-feed');
+    wbBox.innerHTML = ''; thrBox.innerHTML = '';
+
+    wbPosts.forEach((post, i) => {
+      const username = realUsernames[i % realUsernames.length];
+      wbBox.innerHTML += `
+        <div class="weibo-card">
+          <div class="weibo-user-bar">
+            <div class="weibo-avatar">👤</div>
+            <div>
+              <div>@${username}</div>
+              <div style="font-size:11px; color:#999; font-weight:normal;">12分钟前 来自 微博 HTML5</div>
+            </div>
+          </div>
+          <div class="weibo-text">${post}</div>
+          <div class="weibo-footer">
+            <span>转发 1.4k</span>
+            <span>评论 9.2k</span>
+            <span>赞 4.8w</span>
+          </div>
+        </div>
+      `;
+    });
+
+    thrPosts.forEach((post, i) => {
+      const username = realUsernames[(i + 50) % realUsernames.length];
+      thrBox.innerHTML += `
+        <div style="background:#18181a; padding:12px; border-bottom:0.5px solid #28282a;">
+          <div style="font-size:13px; font-weight:bold; color:#eee;">@${username}</div>
+          <div style="font-size:14px; color:#ccc; margin-top:4px; white-space:pre-line;">${post}</div>
+          <div style="font-size:12px; color:#777; margin-top:6px;">❤️ 1,829 · 💬 310</div>
+        </div>
+      `;
+    });
+  }
+
+  function refreshFeed(type) {
+    renderFeeds();
+    alert('已刷新最新动态！');
+  }
+
+  /* 初始化 IG 与 Twitter 私信（已移除 _tw 后缀） */
+  function initDMs() {
+    const igBox = document.getElementById('ig-dm-box');
+    const twBox = document.getElementById('twitter-dm-box');
+
+    for (let i = 0; i < 100; i++) {
+      const igUser = realUsernames[i % realUsernames.length];
+      const igText = igDMs[i];
+
+      gameState.dmData[igUser] = [{ sender: 'other', text: igText }];
+      igBox.innerHTML += `
+        <div class="dm-item-card" onclick="openIGChat('${igUser}')">
+          <div style="font-size:12px; font-weight:bold; color:#0095f6;">@${igUser}</div>
+          <div style="font-size:12px; color:#444; margin-top:2px;">${igText}</div>
+        </div>
+      `;
+
+      // 直接使用纯正的用户名，不加 _tw
+      const twUser = realUsernames[(i + 33) % realUsernames.length];
+      const twText = twDMs[i];
+
+      gameState.twDmData[twUser] = [{ sender: 'other', text: twText }];
+      twBox.innerHTML += `
+        <div class="dm-item-card-dark" onclick="openTWChat('${twUser}')">
+          <div style="font-size:12px; font-weight:bold; color:#ff3b30;">@${twUser}</div>
+          <div style="font-size:12px; color:#ccc; margin-top:2px;">${twText}</div>
+        </div>
+      `;
+    }
+  }
+
+  /* IG 对线 */
+  function openIGChat(user) {
+    gameState.currentIGUser = user;
+    document.getElementById('ig-main-view').style.display = 'none';
+    document.getElementById('ig-chat-view').style.display = 'flex';
+    document.getElementById('ig-nav-left').style.display = 'inline';
+    document.getElementById('ig-header-title').innerText = `@${user}`;
+    renderIGChat();
+  }
+
+  function backToIGList() {
+    document.getElementById('ig-main-view').style.display = 'block';
+    document.getElementById('ig-chat-view').style.display = 'none';
+    document.getElementById('ig-nav-left').style.display = 'none';
+    document.getElementById('ig-header-title').innerText = "Instagram";
+  }
+
+  function renderIGChat() {
+    const box = document.getElementById('ig-chat-history');
+    box.innerHTML = '';
+    const history = gameState.dmData[gameState.currentIGUser] || [];
+    history.forEach(m => {
+      const div = document.createElement('div');
+      div.style.alignSelf = m.sender === 'me' ? 'flex-end' : 'flex-start';
+      div.style.background = m.sender === 'me' ? '#0095f6' : '#eef1f5';
+      div.style.color = m.sender === 'me' ? '#fff' : '#000';
+      div.style.padding = '8px 12px';
+      div.style.borderRadius = '12px';
+      div.style.fontSize = '13px';
+      div.style.maxWidth = '80%';
+      div.innerText = m.text;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendIGDM() {
+    const input = document.getElementById('ig-chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const user = gameState.currentIGUser;
+    gameState.dmData[user].push({ sender: 'me', text: text });
+    input.value = '';
+    renderIGChat();
+
+    setTimeout(() => {
+      const replies = [
+        "You think you can just ignore us and get away with it?!",
+        "Stop making excuses and leave him alone!",
+        "Do you even realize how toxic you are to his career?"
+      ];
+      const rText = replies[Math.floor(Math.random() * replies.length)];
+      gameState.dmData[user].push({ sender: 'other', text: rText });
+      renderIGChat();
+    }, 1100);
+  }
+
+  /* Twitter 对线 */
+  function openTWChat(user) {
+    gameState.currentTWUser = user;
+    document.getElementById('tw-main-view').style.display = 'none';
+    document.getElementById('tw-chat-view').style.display = 'flex';
+    document.getElementById('tw-nav-left').style.display = 'inline';
+    document.getElementById('tw-header-title').innerText = `@${user}`;
+    renderTWChat();
+  }
+
+  function backToTWList() {
+    document.getElementById('tw-main-view').style.display = 'block';
+    document.getElementById('tw-chat-view').style.display = 'none';
+    document.getElementById('tw-nav-left').style.display = 'none';
+    document.getElementById('tw-header-title').innerText = "𝕏 (트위터)";
+  }
+
+  function renderTWChat() {
+    const box = document.getElementById('tw-chat-history');
+    box.innerHTML = '';
+    const history = gameState.twDmData[gameState.currentTWUser] || [];
+    history.forEach(m => {
+      const div = document.createElement('div');
+      div.style.alignSelf = m.sender === 'me' ? 'flex-end' : 'flex-start';
+      div.style.background = m.sender === 'me' ? '#1d9bf0' : '#222';
+      div.style.color = '#fff';
+      div.style.padding = '8px 12px';
+      div.style.borderRadius = '12px';
+      div.style.fontSize = '13px';
+      div.style.maxWidth = '80%';
+      div.innerText = m.text;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendTWDM() {
+    const input = document.getElementById('tw-chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const user = gameState.currentTWUser;
+    gameState.twDmData[user].push({ sender: 'me', text: text });
+    input.value = '';
+    renderTWChat();
+
+    setTimeout(() => {
+      const replies = [
+        "희승이 방해하지 마! (别妨碍李羲承！)",
+        "滚出韩娱你根本配不上他！",
+        "别拿他炒作，一个字都别发！"
+      ];
+      const rText = replies[Math.floor(Math.random() * replies.length)];
+      gameState.twDmData[user].push({ sender: 'other', text: rText });
+      renderTWChat();
+    }, 1100);
+  }
+
+  /* Apple Music 播放器控制 */
+  function selectSong(title) {
+    document.getElementById('playing-title').innerText = title;
+    document.getElementById('music-bar').value = 0;
+    document.getElementById('curr-time').innerText = "0:00";
+    gameState.isPlaying = true;
+    document.getElementById('play-btn').innerText = "⏸️";
+  }
+
+  function togglePlay() {
+    gameState.isPlaying = !gameState.isPlaying;
+    document.getElementById('play-btn').innerText = gameState.isPlaying ? "⏸️" : "▶️";
+  }
+
+  function updateMusicTime(val) {
+    const sec = Math.floor((val / 100) * 222);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    document.getElementById('curr-time').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  /* 触发第二阶段弹窗轰炸 */
+  function triggerStageTwoBombardment() {
+    wxData.aaa.push({ sender: 'other', text: '宝！你上热搜了你知不知道！全网都在扒汉江跟你偶遇的人！' });
+    wxData.mom.push({ sender: 'other', text: '女儿啊，网上的新闻我和你爸看到了，别理那些胡说八道的，照顾好自己。' });
+    gameState.kktHistory.push({ sender: 'other', kr: "기사 보지 말고 있어봐요. 내가 정리하고 있으니까 너무 걱정하지 마요.", cn: "先别看新闻。我在处理，不要太担心。" });
+    renderKKT();
+
+    let count = 0;
+    const interval = setInterval(() => {
+      if (count > 8) { clearInterval(interval); return; }
+      const notifs = [
+        { app: 'Instagram', title: 'Instagram 私信轰炸', body: '@hee_angel 在私信中提及了你...', target: 'instagram' },
+        { app: 'X (Twitter)', title: '𝕏 提及轰炸', body: '#이희승_열애 话题下有 100+ 条关于你的推文', target: 'twitter' },
+        { app: '카카오톡', title: '이희승', body: '기사 보지 말고 있어봐요. 내가 정리할게요.', target: 'kakaotalk' }
+      ];
+      const item = notifs[count % 3];
+      showNotif(item.app, item.title, item.body, item.target);
+      count++;
+    }, 2800);
+  }
+
+  /* Naver 购物 */
+  function buyNaverItem() {
+    const item = document.getElementById('naver-item-name').value || "自定义商品";
+    const price = parseInt(document.getElementById('naver-item-price').value || "0");
+    const card = document.getElementById('naver-card-choice').value;
+    const addr = document.getElementById('naver-addr-custom').value || "李羲承家 (龙山区)";
+
+    gameState.totalSpent += price;
+    document.getElementById('total-spent').innerText = `₩${gameState.totalSpent.toLocaleString()}`;
+
+    const orderList = document.getElementById('order-list');
+    if (gameState.orders.length === 0) orderList.innerHTML = '';
+    
+    orderList.innerHTML += `
+      <div style="background:#222; padding:8px; border-radius:6px;">
+        <div><strong>${item}</strong></div>
+        <div>价格: ₩${price.toLocaleString()} KRW | ${card}</div>
+        <div style="color:#888;">寄往: ${addr}</div>
+      </div>
+    `;
+    gameState.orders.push(item);
+    alert('下单成功！订单已更新。');
+  }
+
+  /* 相册放大 */
+  function openPhotoFullscreen(src) {
+    document.getElementById('fullscreen-img').src = src;
+    document.getElementById('photo-fullscreen').style.display = 'flex';
+  }
+  function closePhotoFullscreen() {
+    document.getElementById('photo-fullscreen').style.display = 'none';
+  }
+
+  /* 初始化 */
+  window.onload = () => {
+    renderKKT();
+    renderWechat('aaa');
+    renderFeeds();
+    initDMs();
+  };
+
+  /* 支持 Space / Esc 快速返回桌面 */
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' || e.key === ' ') closeApp();
+  });
+</script>
+</body>
+</html>
